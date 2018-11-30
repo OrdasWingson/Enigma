@@ -13,16 +13,16 @@ namespace Enigma
         string extension;//расширение файла
 
 
+
         public Form1()
         {
             InitializeComponent();
             textBoxPath.Text = @"C:\Games\1";
 
-
         }
 
-        //шифрование
-        private void button1_Click(object sender, EventArgs e)
+        //проверка
+        bool check()
         {
             //блок проверки на пустую строку
             if (textBoxPath.Text != "")
@@ -30,70 +30,98 @@ namespace Enigma
                 try
                 {
                     files = Directory.GetFiles(textBoxPath.Text);
-                }         
+                    return true;
+                }
                 catch
                 {
                     MessageBox.Show("Папка не существует.");
-                    return;
+                    return false;
                 }
             }
             else
             {
                 MessageBox.Show("Пустой путь.");
+                return false;
+            }
+        }
+
+        //шифрование
+        private void button1_Click(object sender, EventArgs e)
+        {
+            
+            if(!check())
+            {
                 return;
             }
-
-            
-            foreach (var file in files)
+            Thread thread1 = new Thread(() =>
             {
-                extension = file.Substring(file.LastIndexOf(".") + 1);
-
-                if (extension == "efm" || extension == "efo")
-                    continue;
-
-                int symb = new int();
-                if (extension == "mpg")
+                foreach (var file in files)
                 {
-                    
-                    
-                    using (FileStream fs = new FileStream(file, FileMode.Open))
+                    extension = file.Substring(file.LastIndexOf(".") + 1);
+
+                    BeginInvoke(new MethodInvoker(delegate
                     {
-                        for (var i = 0; i < fs.Length; i++)
+                        textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " кодируется." + Environment.NewLine;
+                    }));
+                    
+                    if (extension == "efm" || extension == "efo")
+                        continue;
+
+                    int symb = new int();
+
+                    if (extension == "mpg")
+                    {
+                        using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
-                            symb = fs.ReadByte();
-                            symb++;
-                            fs.Seek(-1, SeekOrigin.Current);
-                            fs.WriteByte((byte)symb);
+                                for (var i = 0; i < fs.Length; i++)
+                                {
+                                    symb = fs.ReadByte();
+                                    symb++;
+                                    fs.Seek(-1, SeekOrigin.Current);
+                                    fs.WriteByte((byte)symb);
+                                }
                         }
 
-                        
+                        string[] fName = new string[2];
+                        fName = file.Split('.');
+                        File.Move(file, fName[0] + ".efm");
+
                     }
-
-                    string[] fName = new string[2];
-                    fName = file.Split('.');
-                    File.Move(file, fName[0] + ".efm");
-
-                }
-                else
-                {
-                    using (FileStream fs = new FileStream(file, FileMode.Open))
+                    else
                     {
-                        
-                        for (var i = 0; i < countOfSymbol; i++)
+                        using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
-                            symb = fs.ReadByte();
-                            symb++;
-                            fs.Seek(-1, SeekOrigin.Current);
-                            fs.WriteByte((byte)symb);
+                        
+                            for (var i = 0; i < countOfSymbol; i++)
+                            {
+                                symb = fs.ReadByte();
+                                symb++;
+                                fs.Seek(-1, SeekOrigin.Current);
+                                fs.WriteByte((byte)symb);
+                            }
                         }
+
+                        string[] fName = new string[2];
+                        fName = file.Split('.');
+                        File.Move(file, fName[0] + "=" + extension + ".efo");
                     }
 
-                    string[] fName = new string[2];
-                    fName = file.Split('.');
-                    File.Move(file, fName[0] + "=" + extension + ".efo");
+                    BeginInvoke(new MethodInvoker(delegate
+                    {
+                        textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " has done" + Environment.NewLine;
+                    }));
+
+                    
                 }
-             }
-                textBoxInfo.Text = "\nКодирование завершено.";
+
+                BeginInvoke(new MethodInvoker(delegate
+                {
+                    textBoxInfo.Text += "Кодирование завершено." + Environment.NewLine;
+                }));
+                
+            });
+            thread1.Start();
+            
                 
             
         }
@@ -101,70 +129,74 @@ namespace Enigma
         //дешифровка
         private void button2_Click(object sender, EventArgs e)
         {
-            if (textBoxPath.Text != "")
+            if (!check())
             {
-                try
-                {
-                    files = Directory.GetFiles(textBoxPath.Text);
-                }
-                catch
-                {
-                    MessageBox.Show("Папка не существует.");
-                    return;
-                }
-            }
-            else
-            {
-                MessageBox.Show("Пустой путь.");
                 return;
             }
+            Thread thread1 = new Thread(() =>
+            {                
 
-            textBoxInfo.Text = "Дешифровка начата.";
-
-            foreach (var file in files)
-            {
-                byte[] array = new byte[countOfSymbol];
-                extension = file.Substring(file.LastIndexOf(".") + 1);
-                int symb = new int();
-                if (extension == "efm")//mpg
+                foreach (var file in files)
                 {
-                    
-                    using (FileStream fs = new FileStream(file, FileMode.Open))
+                    BeginInvoke(new MethodInvoker(delegate
                     {
-                        for (var i = 0; i < fs.Length; i++)
+                        textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " декодируется." + Environment.NewLine;
+                    }));
+
+                    byte[] array = new byte[countOfSymbol];
+                    extension = file.Substring(file.LastIndexOf(".") + 1);
+                    int symb = new int();
+                    if (extension == "efm")//mpg
+                    {
+
+                        using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
-                            symb = fs.ReadByte();
-                            symb--;
-                            fs.Seek(-1, SeekOrigin.Current);
-                            fs.WriteByte((byte)symb);
+                            
+                             for (var i = 0; i < fs.Length; i++)
+                             {
+                                 symb = fs.ReadByte();
+                                 symb--;
+                                 fs.Seek(-1, SeekOrigin.Current);
+                                 fs.WriteByte((byte)symb);
+                             }
+                            
                         }
+
+                        string[] fName = new string[2];
+                        fName = file.Split('.');
+                        File.Move(file, fName[0] + ".mpg");
+
+                    }
+                    else if (extension == "efo")
+                    {
+                        using (FileStream fs = new FileStream(file, FileMode.Open))
+                        {
+                            for (var i = 0; i < countOfSymbol; i++)
+                            {
+                                symb = fs.ReadByte();
+                                symb--;
+                                fs.Seek(-1, SeekOrigin.Current);
+                                fs.WriteByte((byte)symb);
+                            }
+                        }
+                        string[] fName = new string[2];
+                        fName = file.Split('=');
+                        string[] extension = fName[1].Split('.');
+                        File.Move(file, fName[0] + "." + extension[0]);
                     }
 
-                    string[] fName = new string[2];
-                    fName = file.Split('.');
-                    File.Move(file, fName[0] + ".mpg");
-
-                }
-                else if(extension == "efo")
-                {
-                    using (FileStream fs = new FileStream(file, FileMode.Open))
+                    BeginInvoke(new MethodInvoker(delegate
                     {
-                        for (var i = 0; i < countOfSymbol; i++)
-                        {
-                            symb = fs.ReadByte();
-                            symb--;
-                            fs.Seek(-1, SeekOrigin.Current);
-                            fs.WriteByte((byte)symb);
-                        }
-                    }
-                    string[] fName = new string[2];
-                    fName = file.Split('=');
-                    string[] extension = fName[1].Split('.');
-                    File.Move(file, fName[0] + "."+ extension[0]);
+                        textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " has done" + Environment.NewLine;
+                    }));
                 }
-                
-            }
-            textBoxInfo.Text = "Декодирование завершено.";
+
+                BeginInvoke(new MethodInvoker(delegate
+                {
+                    textBoxInfo.Text += "Кодирование завершено." + Environment.NewLine;
+                }));
+            });
+            thread1.Start();
         }
        
         //выбрать путь
