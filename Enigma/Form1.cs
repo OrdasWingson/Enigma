@@ -11,13 +11,12 @@ namespace Enigma
         string[] files;
         int countOfSymbol = 14;
         string extension;//расширение файла
-
-
-
+        int step = 100; //шаг
+        
         public Form1()
         {
             InitializeComponent();
-            textBoxPath.Text = @"C:\Games\1";
+            textBoxPath.Text = @"C:\Games\1";                        
 
         }
 
@@ -53,7 +52,7 @@ namespace Enigma
             {
                 return;
             }
-            Thread thread1 = new Thread(() =>
+            Thread threadCod = new Thread(() =>
             {
                 foreach (var file in files)
                 {
@@ -63,7 +62,7 @@ namespace Enigma
                     {
                         textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " кодируется." + Environment.NewLine;
                     }));
-                    
+
                     if (extension == "efm" || extension == "efo")
                         continue;
 
@@ -73,13 +72,28 @@ namespace Enigma
                     {
                         using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
-                                for (var i = 0; i < fs.Length; i++)
-                                {
-                                    symb = fs.ReadByte();
-                                    symb++;
-                                    fs.Seek(-1, SeekOrigin.Current);
-                                    fs.WriteByte((byte)symb);
-                                }
+                            int procces=0;
+                            double size = (double)fs.Length;
+                            for (var i = 0; i < fs.Length; i += step)
+                            {
+                                fs.Seek(i, SeekOrigin.Begin);
+                                symb = fs.ReadByte();
+                                symb++;
+                                fs.Seek(i, SeekOrigin.Begin);
+                                fs.WriteByte((byte)symb);
+
+                                /*procces = (int)(((double)i/size)*100);
+                                                               
+                                if ((procces % 5) == 0)
+                                {                                   
+                                   BeginInvoke(new MethodInvoker(delegate
+                                  {
+                                      textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " декодируется. " + procces + "%" + Environment.NewLine;
+                                  }));
+                                }*/
+                            }
+
+                           
                         }
 
                         string[] fName = new string[2];
@@ -91,13 +105,14 @@ namespace Enigma
                     {
                         using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
-                        
+
                             for (var i = 0; i < countOfSymbol; i++)
                             {
                                 symb = fs.ReadByte();
                                 symb++;
                                 fs.Seek(-1, SeekOrigin.Current);
                                 fs.WriteByte((byte)symb);
+
                             }
                         }
 
@@ -111,20 +126,21 @@ namespace Enigma
                         textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " has done" + Environment.NewLine;
                     }));
 
-                    
+
                 }
 
                 BeginInvoke(new MethodInvoker(delegate
                 {
                     textBoxInfo.Text += "Кодирование завершено." + Environment.NewLine;
                 }));
-                
+
             });
-            thread1.Start();
-            
+            threadCod.Start();
                 
             
         }
+
+
 
         //дешифровка
         private void button2_Click(object sender, EventArgs e)
@@ -133,8 +149,8 @@ namespace Enigma
             {
                 return;
             }
-            Thread thread1 = new Thread(() =>
-            {                
+            Thread threadDec = new Thread(() =>
+            {
 
                 foreach (var file in files)
                 {
@@ -151,15 +167,21 @@ namespace Enigma
 
                         using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
-                            
-                             for (var i = 0; i < fs.Length; i++)
-                             {
-                                 symb = fs.ReadByte();
-                                 symb--;
-                                 fs.Seek(-1, SeekOrigin.Current);
-                                 fs.WriteByte((byte)symb);
-                             }
-                            
+                            long procces = 0;
+
+                            for (var i = 0; i < fs.Length; i += step)
+                            {
+                                fs.Seek(i, SeekOrigin.Begin);
+                                symb = fs.ReadByte();
+                                symb--;
+                                fs.Seek(i, SeekOrigin.Begin);
+                                fs.WriteByte((byte)symb);
+
+                                procces = ((i * 100) / fs.Length)+1;
+                               
+
+                            }
+
                         }
 
                         string[] fName = new string[2];
@@ -193,10 +215,11 @@ namespace Enigma
 
                 BeginInvoke(new MethodInvoker(delegate
                 {
-                    textBoxInfo.Text += "Кодирование завершено." + Environment.NewLine;
+                    textBoxInfo.Text += "Декодирование завершено." + Environment.NewLine;
                 }));
+
             });
-            thread1.Start();
+            threadDec.Start();
         }
        
         //выбрать путь
@@ -215,6 +238,8 @@ namespace Enigma
                 textBoxInfo.Text += "\r\n" + file.ToString() + "\r\n";
             }
         }
+
+       
     }
 }
 
