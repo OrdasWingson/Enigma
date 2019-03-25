@@ -3,21 +3,47 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using System.Drawing;
 
 namespace Enigma
 {
     public partial class Form1 : Form
     {
-        string[] files;
-        int countOfSymbol = 14;
+        string[] files; //файлы в папке
+        int countOfSymbol = 14; // количество первых кодируемых байт
         string extension;//расширение файла
         int step = 100; //шаг
         
         public Form1()
         {
             InitializeComponent();
-            textBoxPath.Text = @"C:\Games\1";                        
+            textBoxPath.Text = @"C:\Games\1";
+            
+            listBoxFuller();
+        }
 
+        void listBoxFuller()//заполнение листбокас с проверкой
+        {
+            if (check())
+            {
+                listBoxPath.Items.Clear();                      
+                foreach (var file in files)
+                {
+                    extension = file.Substring(file.LastIndexOf(".") + 1);//получаем расширение
+                    if (extension == "efm" || extension == "efo")//помечает кодированные файлы красным некодированны зеленым
+                    {
+                        listBoxPath.Items.Add(new MyListBoxItem(Color.Red, file.Substring(file.LastIndexOf(@"\") + 1)));
+                        
+
+
+                    }
+                    else
+                    {
+                       listBoxPath.Items.Add(new MyListBoxItem(Color.Green, file.Substring(file.LastIndexOf(@"\") + 1)));
+                        
+                    }
+                }
+            }
         }
 
         //проверка
@@ -52,6 +78,10 @@ namespace Enigma
             {
                 return;
             }
+
+            textBoxInfo.Text = "";
+            button1.Enabled = false;
+            button2.Enabled = false;
             Thread threadCod = new Thread(() =>
             {
                 foreach (var file in files)
@@ -68,54 +98,47 @@ namespace Enigma
 
                     int symb = new int();
 
-                    if (extension == "mpg")
+                    if (extension == "mpg" || extension == "MPG")
                     {
                         using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
-                            int procces=0;
-                            double size = (double)fs.Length;
+                            //int procces=0;
+                            //double size = (double)fs.Length;
                             for (var i = 0; i < fs.Length; i += step)
                             {
-                                fs.Seek(i, SeekOrigin.Begin);
-                                symb = fs.ReadByte();
-                                symb++;
-                                fs.Seek(i, SeekOrigin.Begin);
-                                fs.WriteByte((byte)symb);
+                                fs.Seek(i, SeekOrigin.Begin);//устанавливает каретку на i байт
+                                symb = fs.ReadByte(); // считывает байт в память и переводит каретку на байт вперед
+                                symb++; // кодирует байт
+                                fs.Seek(i, SeekOrigin.Begin); //возвращает каретку на i байт
+                                fs.WriteByte((byte)symb); // записывае байт
 
-                                /*procces = (int)(((double)i/size)*100);
-                                                               
-                                if ((procces % 5) == 0)
-                                {                                   
-                                   BeginInvoke(new MethodInvoker(delegate
-                                  {
-                                      textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " декодируется. " + procces + "%" + Environment.NewLine;
-                                  }));
-                                }*/
+                                
                             }
 
                            
                         }
-
-                        string[] fName = new string[2];
+                        //три строки меняю расширение файла
+                        string[] fName = new string[2]; 
                         fName = file.Split('.');
                         File.Move(file, fName[0] + ".efm");
 
                     }
-                    else
+                    else //если расширение не соответствует mpeg
                     {
                         using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
 
                             for (var i = 0; i < countOfSymbol; i++)
-                            {
-                                symb = fs.ReadByte();
-                                symb++;
-                                fs.Seek(-1, SeekOrigin.Current);
-                                fs.WriteByte((byte)symb);
+                            {                                
+                                fs.Seek(i, SeekOrigin.Begin);//устанавливает каретку на i байт
+                                symb = fs.ReadByte(); // считывает байт в память и переводит каретку на байт вперед
+                                symb++; // кодирует байт
+                                fs.Seek(i, SeekOrigin.Begin); //возвращает каретку на i байт
+                                fs.WriteByte((byte)symb); // записывае байт
 
                             }
                         }
-
+                        //три строки меняю расширение файла
                         string[] fName = new string[2];
                         fName = file.Split('.');
                         File.Move(file, fName[0] + "=" + extension + ".efo");
@@ -128,10 +151,13 @@ namespace Enigma
 
 
                 }
-
+                
                 BeginInvoke(new MethodInvoker(delegate
                 {
-                    textBoxInfo.Text += "Кодирование завершено." + Environment.NewLine;
+                    listBoxFuller();
+                    textBoxInfo.Text = "Кодирование завершено." + Environment.NewLine;
+                    button1.Enabled = true;
+                    button2.Enabled = true;
                 }));
 
             });
@@ -145,10 +171,15 @@ namespace Enigma
         //дешифровка
         private void button2_Click(object sender, EventArgs e)
         {
+
             if (!check())
             {
                 return;
             }
+
+            textBoxInfo.Text = "";
+            button1.Enabled = false;
+            button2.Enabled = false;
             Thread threadDec = new Thread(() =>
             {
 
@@ -167,18 +198,13 @@ namespace Enigma
 
                         using (FileStream fs = new FileStream(file, FileMode.Open))
                         {
-                            long procces = 0;
-
                             for (var i = 0; i < fs.Length; i += step)
                             {
-                                fs.Seek(i, SeekOrigin.Begin);
-                                symb = fs.ReadByte();
-                                symb--;
-                                fs.Seek(i, SeekOrigin.Begin);
-                                fs.WriteByte((byte)symb);
-
-                                procces = ((i * 100) / fs.Length)+1;
-                               
+                                fs.Seek(i, SeekOrigin.Begin);//устанавливает каретку на i байт
+                                symb = fs.ReadByte(); // считывает байт в память и переводит каретку на байт вперед
+                                symb--; // кодирует байт
+                                fs.Seek(i, SeekOrigin.Begin); //возвращает каретку на i байт
+                                fs.WriteByte((byte)symb); // записывае байт
 
                             }
 
@@ -195,10 +221,11 @@ namespace Enigma
                         {
                             for (var i = 0; i < countOfSymbol; i++)
                             {
-                                symb = fs.ReadByte();
-                                symb--;
-                                fs.Seek(-1, SeekOrigin.Current);
-                                fs.WriteByte((byte)symb);
+                                fs.Seek(i, SeekOrigin.Begin);//устанавливает каретку на i байт
+                                symb = fs.ReadByte(); // считывает байт в память и переводит каретку на байт вперед
+                                symb--; // кодирует байт
+                                fs.Seek(i, SeekOrigin.Begin); //возвращает каретку на i байт
+                                fs.WriteByte((byte)symb); // записывае байт
                             }
                         }
                         string[] fName = new string[2];
@@ -212,10 +239,13 @@ namespace Enigma
                         textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " has done" + Environment.NewLine;
                     }));
                 }
-
+                
                 BeginInvoke(new MethodInvoker(delegate
                 {
-                    textBoxInfo.Text += "Декодирование завершено." + Environment.NewLine;
+                    listBoxFuller();
+                    textBoxInfo.Text = "Декодирование завершено." + Environment.NewLine;
+                    button1.Enabled = true;
+                    button2.Enabled = true;
                 }));
 
             });
@@ -227,20 +257,52 @@ namespace Enigma
         {
             FolderBrowserDialog folderBrowser = new FolderBrowserDialog();
 
-            
+            folderBrowser.SelectedPath = textBoxPath.Text;
 
             if (folderBrowser.ShowDialog() == DialogResult.OK)
             {
                 textBoxPath.Text = folderBrowser.SelectedPath;
                 files = Directory.GetFiles(textBoxPath.Text);
-
-            foreach (var file in files)
-                textBoxInfo.Text += "\r\n" + file.ToString() + "\r\n";
+                listBoxFuller();
             }
         }
 
-       
+        private void listBoxPath_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            MyListBoxItem item = listBoxPath.Items[e.Index] as MyListBoxItem; // Get the current item and cast it to MyListBoxItem
+            e.DrawBackground();
+
+            if (item != null)
+            {
+                e.Graphics.DrawString(item.Message, e.Font, new SolidBrush(item.ItemColor), e.Bounds, StringFormat.GenericDefault);                
+                e.DrawFocusRectangle();
+            }
+            else
+            {
+                // The item isn't a MyListBoxItem, do something about it
+            }
+        }
+    }
+
+    public class MyListBoxItem
+    {
+        public MyListBoxItem(Color c, string m)
+        {
+            ItemColor = c;
+            Message = m;
+        }
+        public Color ItemColor { get; set; }
+        public string Message { get; set; }
     }
 }
 
 
+/*procces = (int)(((double)i/size)*100);
+                                                               
+                                if ((procces % 5) == 0)
+                                {                                   
+                                   BeginInvoke(new MethodInvoker(delegate
+                                  {
+                                      textBoxInfo.Text += file.Substring(file.LastIndexOf(@"\") + 1) + " декодируется. " + procces + "%" + Environment.NewLine;
+                                  }));
+                                }*/
